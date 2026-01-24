@@ -11,9 +11,7 @@
       --cardW: 280px;
       --cardH: 380px;
       --radius: 18px;
-
-      --stepMs: 2800;   /* time between shifts */
-      --moveMs: 900;    /* animation duration */
+      --speed: 95; /* px/sec: increase for faster drift */
     }
 
     * { box-sizing: border-box; }
@@ -38,11 +36,13 @@
       margin-bottom: 16px;
       user-select: none;
     }
+
     .unit {
       font-size: 36px;
       font-weight: 800;
       letter-spacing: 3px;
     }
+
     .subtitle {
       margin-top: 4px;
       font-size: 14px;
@@ -58,7 +58,7 @@
       position: relative;
     }
 
-    /* edge fade */
+    /* edge fades */
     .stage::before,
     .stage::after {
       content: "";
@@ -66,7 +66,7 @@
       top: 0;
       height: 100%;
       width: 22%;
-      z-index: 10;
+      z-index: 5;
       pointer-events: none;
     }
     .stage::before {
@@ -78,6 +78,12 @@
       background: linear-gradient(270deg, rgba(5,7,12,0.98), rgba(5,7,12,0));
     }
 
+    .track {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
     .card {
       position: absolute;
       top: 50%;
@@ -87,9 +93,7 @@
       transform-origin: center;
       will-change: transform, opacity;
       filter: drop-shadow(0 30px 90px rgba(0,0,0,0.55));
-      transition:
-        transform var(--moveMs) cubic-bezier(.2,.8,.2,1),
-        opacity   var(--moveMs) cubic-bezier(.2,.8,.2,1);
+      pointer-events: none;
     }
 
     .image {
@@ -112,55 +116,18 @@
       margin-top: 10px;
       font-size: 15px;
       font-weight: 700;
+      letter-spacing: 0.2px;
     }
 
     .years {
       margin-top: 4px;
       font-size: 12px;
-      opacity: 0.75;
-    }
-
-    /* ===== positions =====
-       Motion direction: left -> center -> right -> offRight
-       Center progresses NEWEST -> OLDER by shifting left into center each step.
-    */
-    .pos-left {
-      transform: translate(calc(-50% - 360px), -50%) scale(0.84);
-      opacity: 0.45;
-      z-index: 1;
-    }
-    .pos-center {
-      transform: translate(-50%, -50%) scale(1.05);
-      opacity: 1;
-      z-index: 3;
-    }
-    .pos-right {
-      transform: translate(calc(-50% + 360px), -50%) scale(0.84);
-      opacity: 0.45;
-      z-index: 1;
-    }
-    .pos-offRight {
-      transform: translate(calc(-50% + 760px), -50%) scale(0.78);
-      opacity: 0;
-      z-index: 0;
-    }
-    .pos-offLeft {
-      transform: translate(calc(-50% - 760px), -50%) scale(0.78);
-      opacity: 0;
-      z-index: 0;
-    }
-
-    /* when we "teleport" a card back to the left, we temporarily disable transitions */
-    .no-anim {
-      transition: none !important;
+      opacity: 0.78;
+      letter-spacing: 0.3px;
     }
 
     @media (max-width: 760px) {
       :root { --cardW: 220px; --cardH: 300px; }
-      .pos-left  { transform: translate(calc(-50% - 280px), -50%) scale(0.84); }
-      .pos-right { transform: translate(calc(-50% + 280px), -50%) scale(0.84); }
-      .pos-offRight { transform: translate(calc(-50% + 640px), -50%) scale(0.78); }
-      .pos-offLeft  { transform: translate(calc(-50% - 640px), -50%) scale(0.78); }
     }
   </style>
 </head>
@@ -171,14 +138,13 @@
     <div class="subtitle">over the years</div>
   </div>
 
-  <div class="stage">
-    <div id="cardA" class="card"></div>
-    <div id="cardB" class="card"></div>
-    <div id="cardC" class="card"></div>
+  <div class="stage" id="stage">
+    <div class="track" id="track"></div>
   </div>
 
   <script>
-    // NEWEST -> OLDEST (center will count down)
+    // ===== DATA (NEWEST -> OLDEST) =====
+    // Center starts at slides[0], then counts down (older) as time passes.
     const slides = [
       { name: "Daniel J. Ryan, Jr.", years: "2-01", src: "images/Dan Ryan Jr.JPEG", },
       { name: "Stephen P. Dorsey", years: "2010-2011", src: "images/Steve Dorsey.JPEG", }, 
@@ -210,85 +176,126 @@
       { name: "Alton C. Rowe, Sr.", years: "1911–1933", src: "images/Alton Rowe Sr.JPEG" }
     ];
 
-    const stepMs = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--stepMs')) || 2800;
-    const moveMs = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--moveMs')) || 900;
+    const track = document.getElementById("track");
+    const stage = document.getElementById("stage");
 
-    const cardA = document.getElementById('cardA');
-    const cardB = document.getElementById('cardB');
-    const cardC = document.getElementById('cardC');
+    const speed = Number(getComputedStyle(document.documentElement).getPropertyValue("--speed")) || 95;
 
-    function render(card, slide) {
-      card.innerHTML = `
+    // exactly 3 cards
+    const cards = [];
+
+    function render(cardEl, slide) {
+      cardEl.innerHTML = `
         <div class="image"><img src="${slide.src}" alt="${slide.name}"></div>
         <div class="name">${slide.name}</div>
         <div class="years">${slide.years}</div>
       `;
     }
 
-    // We maintain 3 cards. The center advances NEWEST -> OLDER each step.
-    // Mapping:
-    // left  = next (older) that will become center
-    // center= current
-    // right = previous (newer) that just left center
-    let idx = 0; // current (center) index in slides (starts NEWEST)
+    function exitX() {
+      // distance from center to edge + buffer
+      const w = stage.clientWidth;
+      return w / 2 + 520;
+    }
 
-    // Initial fill:
-    // center = slides[0]
-    // left   = slides[1]
-    // right  = slides[2]
+    let spacing = 360;
+
+    function resetSpacing() {
+      spacing = Math.min(420, Math.max(300, stage.clientWidth * 0.34));
+    }
+
+    function clamp(v, a, b) {
+      return Math.max(a, Math.min(b, v));
+    }
+
+    // bigger toward center
+    function styleFromX(x) {
+      const e = exitX();
+      const t = 1 - clamp(Math.abs(x) / e, 0, 1);
+      const ease = t * t * t;
+      return {
+        scale: 0.78 + ease * 0.40,   // center gets bigger
+        opacity: 0.10 + ease * 0.90, // edges fade out
+        z: Math.round(ease * 1000),
+      };
+    }
+
+    // Indices: center starts at 0 (newest)
+    // left is older, right is older-older at start.
+    let centerIndex = 0;
+
     function init() {
-      const centerSlide = slides[idx % slides.length];
-      const leftSlide   = slides[(idx + 1) % slides.length];
-      const rightSlide  = slides[(idx + 2) % slides.length];
+      resetSpacing();
+      track.innerHTML = "";
+      cards.length = 0;
 
-      render(cardA, leftSlide);
-      render(cardB, centerSlide);
-      render(cardC, rightSlide);
+      // positions: left, center, right
+      const startXs = [-spacing, 0, spacing];
 
-      cardA.className = 'card pos-left';
-      cardB.className = 'card pos-center';
-      cardC.className = 'card pos-right';
+      for (let i = 0; i < 3; i++) {
+        const slideIndex = (centerIndex + i) % slides.length; // 0,1,2
+        const el = document.createElement("div");
+        el.className = "card";
+        render(el, slides[slideIndex]);
+        track.appendChild(el);
+
+        cards.push({
+          el,
+          x: startXs[i],
+          slideIndex
+        });
+      }
     }
 
-    function shiftOnce() {
-      // Move: left -> center -> right -> offRight
-      const leftEl = document.querySelector('.pos-left');
-      const centerEl = document.querySelector('.pos-center');
-      const rightEl = document.querySelector('.pos-right');
-
-      // Animate positions
-      leftEl.classList.remove('pos-left');   leftEl.classList.add('pos-center');
-      centerEl.classList.remove('pos-center'); centerEl.classList.add('pos-right');
-      rightEl.classList.remove('pos-right'); rightEl.classList.add('pos-offRight');
-
-      // After animation completes, recycle the offRight card to become new left
-      window.setTimeout(() => {
-        // rightEl is currently offRight and invisible, we recycle it.
-        // Advance timeline: center becomes next older => idx++
-        idx = (idx + 1) % slides.length;
-
-        const newLeftIndex = (idx + 1) % slides.length; // next older after new center
-        const newLeftSlide = slides[newLeftIndex];
-
-        // Teleport offRight card to offLeft (no animation), update content, then move to left
-        rightEl.classList.add('no-anim');
-        rightEl.classList.remove('pos-offRight');
-        rightEl.classList.add('pos-offLeft');
-
-        render(rightEl, newLeftSlide);
-
-        // force reflow so the browser applies no-anim position first
-        rightEl.offsetHeight;
-
-        // Put it into left position, then re-enable animation for next cycle
-        rightEl.classList.remove('pos-offLeft');
-        rightEl.classList.add('pos-left');
-        rightEl.classList.remove('no-anim');
-      }, moveMs + 20);
+    function nextOlderIndex(fromIndex) {
+      return (fromIndex + 1) % slides.length;
     }
+
+    let last = performance.now();
+
+    function tick(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+
+      // move right continuously
+      for (const c of cards) c.x += speed * dt;
+
+      // recycle any card that exits right edge:
+      // it re-enters from left with the next older slide.
+      for (const c of cards) {
+        if (c.x > exitX()) {
+          const minX = Math.min(...cards.map(k => k.x));
+          c.x = minX - spacing;
+
+          // find current LEFTMOST slideIndex (oldest currently visible),
+          // then assign the next older after that.
+          const leftmost = cards.reduce((best, cur) => (cur.x < best.x ? cur : best), cards[0]);
+          const newIdx = nextOlderIndex(leftmost.slideIndex);
+
+          c.slideIndex = newIdx;
+          render(c.el, slides[newIdx]);
+        }
+      }
+
+      // apply transforms (center bigger)
+      for (const c of cards) {
+        const { scale, opacity, z } = styleFromX(c.x);
+        c.el.style.zIndex = z;
+        c.el.style.opacity = opacity;
+        c.el.style.transform =
+          `translate(calc(-50% + ${c.x}px), -50%) scale(${scale})`;
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", () => {
+      // keep spacing responsive without breaking motion
+      resetSpacing();
+    });
 
     init();
-    setInterval(shiftOnce, stepMs);
+    requestAnimationFrame(tick);
   </script>
 </body>
 </html>
