@@ -11,13 +11,7 @@
         --cardW: 280px;
         --cardH: 380px;
         --radius: 18px;
-
-        /* distance from center to left/right card centers */
-        --spread: 360px;
-
-        /* animation feel */
-        --speed: 85; /* px per second, higher = faster */
-        --blurEdges: 18px;
+        --speed: 85;
       }
 
       * { box-sizing: border-box; }
@@ -27,8 +21,8 @@
         background:
           radial-gradient(900px 520px at 50% 32%, rgba(90,110,170,0.22), transparent 60%),
           linear-gradient(180deg, #050713, var(--bg));
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
         color: white;
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
         overflow: hidden;
         display: grid;
         place-items: center;
@@ -36,13 +30,10 @@
 
       .stage {
         width: min(1200px, 96vw);
-        height: calc(var(--cardH) + 90px);
+        height: 560px;
         position: relative;
-        display: grid;
-        place-items: center;
       }
 
-      /* soft edge vignettes so cards "disappear" nicely */
       .stage::before,
       .stage::after {
         content: "";
@@ -73,57 +64,50 @@
         top: 50%;
         left: 50%;
         width: var(--cardW);
+        transform-origin: center center;
+        will-change: transform, opacity;
+        filter: drop-shadow(0 30px 90px rgba(0,0,0,0.55));
+        text-align: center;
+      }
+
+      .image {
+        width: 100%;
         height: var(--cardH);
         border-radius: var(--radius);
         overflow: hidden;
-        transform-origin: center center;
-        will-change: transform, opacity, filter;
-
         border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(255,255,255,0.06);
-        box-shadow:
-          0 30px 90px rgba(0,0,0,0.55),
-          0 2px 0 rgba(255,255,255,0.06) inset;
+        background: rgba(255,255,255,0.05);
       }
 
-      .card img {
+      .image img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
       }
 
-      .label {
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        padding: 10px 12px;
-        border-radius: 14px;
-        background: rgba(0,0,0,0.45);
-        border: 1px solid rgba(255,255,255,0.12);
-        backdrop-filter: blur(10px);
-        text-align: center;
-        font-weight: 700;
-        font-size: 14px;
-        letter-spacing: 0.2px;
+      .text {
+        margin-top: 10px;
+        line-height: 1.2;
       }
 
-      .hint {
-        position: fixed;
-        bottom: 14px;
-        left: 50%;
-        transform: translateX(-50%);
+      .name {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
+
+      .years {
+        margin-top: 4px;
         font-size: 12px;
-        opacity: 0.65;
-        user-select: none;
+        letter-spacing: 0.4px;
+        opacity: 0.8; /* IMPORTANT: more visible */
       }
 
       @media (max-width: 760px) {
         :root {
           --cardW: 220px;
           --cardH: 300px;
-          --spread: 280px;
         }
       }
     </style>
@@ -134,135 +118,119 @@
       <div class="track" id="track"></div>
     </div>
 
-    <div class="hint">click anywhere to pause / play</div>
-
     <script>
-      // =====================
-      // 1) PUT YOUR IMAGES HERE
-      // =====================
-      // If you upload images to the repo, use: src: "images/yourfile.jpg"
-      const slides = [ {
-            name: "Alton C. Rowe, Sr.",
-            years: "1911 – 1933",
-            src: "images/Alton Rowe Sr.JPEG",
-            },
+      const slides = [
+        {
+          name: "Person One",
+          years: "1987 – 1994",
+          src: "images/person1.jpg",
+        },
+        {
+          name: "Person Two",
+          years: "1995 – 2002",
+          src: "images/person2.jpg",
+        },
+        {
+          name: "Person Three",
+          years: "2003 – 2010",
+          src: "images/person3.jpg",
+        },
       ];
 
-      // =====================
-      // 2) CONTINUOUS LOOP SETTINGS
-      // =====================
       const track = document.getElementById("track");
       const stage = document.getElementById("stage");
 
-      // how many physical cards exist in the loop (more = smoother)
       const CARD_COUNT = Math.max(slides.length, 7);
-
-      // spacing between card centers (px)
       let spacing = 320;
+      let speed = Number(getComputedStyle(document.documentElement)
+        .getPropertyValue("--speed")) || 85;
 
-      // speed in px/sec (uses CSS var --speed as default)
-      let speed = Number(getComputedStyle(document.documentElement).getPropertyValue("--speed")) || 85;
-
-      // computed from stage width so they exit offscreen nicely
-      function getExitX() {
-        const rect = stage.getBoundingClientRect();
-        // add extra margin so fully off-screen + behind vignette
-        return rect.width / 2 + spacing * 1.2;
+      function exitX() {
+        return stage.clientWidth / 2 + spacing * 1.2;
       }
 
-      // Create cards
       const cards = [];
+
       for (let i = 0; i < CARD_COUNT; i++) {
         const slide = slides[i % slides.length];
 
-        const el = document.createElement("div");
-        el.className = "card";
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const image = document.createElement("div");
+        image.className = "image";
 
         const img = document.createElement("img");
         img.src = slide.src;
         img.alt = slide.name;
 
-        const label = document.createElement("div");
-        label.className = "label";
-        label.textContent = slide.name;
+        const text = document.createElement("div");
+        text.className = "text";
 
-        el.appendChild(img);
-        el.appendChild(label);
-        track.appendChild(el);
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = slide.name;
 
-        cards.push({ el, slideIndex: i % slides.length, x: 0 });
+        const years = document.createElement("div");
+        years.className = "years";
+        years.textContent = slide.years;
+
+        image.appendChild(img);
+        text.appendChild(name);
+        text.appendChild(years);
+        card.appendChild(image);
+        card.appendChild(text);
+        track.appendChild(card);
+
+        cards.push({ el: card, x: 0, index: i % slides.length });
       }
 
-      // init positions (spread left to right)
-      function resetPositions() {
-        // adapt spacing a bit to responsive size
-        const rect = stage.getBoundingClientRect();
-        spacing = Math.min(360, Math.max(250, rect.width / 3.2));
-
-        // start them from left exit to right exit evenly
-        const exitX = getExitX();
-        const totalSpan = (CARD_COUNT - 1) * spacing;
-        const startX = -exitX - totalSpan * 0.15; // extra lead-in
-
-        for (let i = 0; i < cards.length; i++) {
-          cards[i].x = startX + i * spacing;
-        }
+      function reset() {
+        spacing = Math.min(360, Math.max(260, stage.clientWidth / 3));
+        const start = -exitX() - spacing * 2;
+        cards.forEach((c, i) => c.x = start + i * spacing);
       }
 
-      // helpers for scaling/opacity based on distance to center
-      function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+      function clamp(v, a, b) {
+        return Math.max(a, Math.min(b, v));
+      }
 
-      function computeStyleFromX(x, exitX) {
-        // x is relative to center; 0 = center
-        const t = 1 - clamp(Math.abs(x) / exitX, 0, 1); // 1 at center, 0 at edges
+      function styleFromX(x) {
+        const e = exitX();
+        const t = 1 - clamp(Math.abs(x) / e, 0, 1);
+        const ease = t * t * t;
 
-        // Smooth curve: favor center growth
-        const ease = t * t * (3 - 2 * t); // smoothstep
-
-        const scale = 0.78 + ease * 0.42; // 0.78..1.20
-        const opacity = 0.15 + ease * 0.85; // 0.15..1
-        return { scale, opacity, z: Math.round(ease * 1000) };
+        return {
+          scale: 0.75 + ease * 0.55,
+          opacity: 0.2 + ease * 0.8,
+          z: Math.round(ease * 1000),
+        };
       }
 
       let last = performance.now();
-      let paused = false;
 
       function tick(now) {
         const dt = (now - last) / 1000;
         last = now;
 
-        const exitX = getExitX();
-
-        if (!paused) {
-          // move right continuously
-          for (const c of cards) {
-            c.x += speed * dt;
-
-            // when fully off to the right, wrap to far left and advance its image
-            if (c.x > exitX + spacing) {
-              // find current minimum x to place behind it
-              let minX = Infinity;
-              for (const k of cards) minX = Math.min(minX, k.x);
-              c.x = minX - spacing;
-
-              // rotate to next slide for variety
-              c.slideIndex = (c.slideIndex + cards.length) % slides.length;
-              const slide = slides[c.slideIndex];
-              c.el.querySelector("img").src = slide.src;
-              c.el.querySelector("img").alt = slide.name;
-              c.el.querySelector(".label").textContent = slide.name;
-            }
-          }
-        }
-
-        // apply transforms
         for (const c of cards) {
-          const { scale, opacity, z } = computeStyleFromX(c.x, exitX);
+          c.x += speed * dt;
 
-          c.el.style.zIndex = String(z);
-          c.el.style.opacity = String(opacity);
+          if (c.x > exitX() + spacing) {
+            const minX = Math.min(...cards.map(k => k.x));
+            c.x = minX - spacing;
 
-          // translate from center: left:50% top:50% anchor
+            c.index = (c.index + cards.length) % slides.length;
+            const slide = slides[c.index];
+
+            c.el.querySelector("img").src = slide.src;
+            c.el.querySelector(".name").textContent = slide.name;
+            c.el.querySelector(".years").textContent = slide.years;
+          }
+
+          const { scale, opacity, z } = styleFromX(c.x);
+          c.el.style.zIndex = z;
+          c.el.style.opacity = opacity;
           c.el.style.transform =
             `translate(calc(-50% + ${c.x}px), -50%) scale(${scale})`;
         }
@@ -270,15 +238,8 @@
         requestAnimationFrame(tick);
       }
 
-      // pause/play on click for TV ease
-      stage.addEventListener("click", () => {
-        paused = !paused;
-      });
-
-      // keep layout correct on resize
-      window.addEventListener("resize", () => resetPositions());
-
-      resetPositions();
+      window.addEventListener("resize", reset);
+      reset();
       requestAnimationFrame(tick);
     </script>
   </body>
