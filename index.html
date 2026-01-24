@@ -11,7 +11,7 @@
       --cardW: 280px;
       --cardH: 380px;
       --radius: 18px;
-      --speed: 95; /* px/sec */
+      --speed: 110; /* px/sec */
     }
 
     * { box-sizing: border-box; }
@@ -142,6 +142,7 @@
 
   <script>
     // ===== DATA (NEWEST -> OLDEST) =====
+    // Put your full list here in newest->oldest order.
     const slides = [
       { name: "Daniel J. Ryan, Jr.", years: "2-01", src: "images/Dan Ryan Jr.JPEG", },
       { name: "Stephen P. Dorsey", years: "2010-2011", src: "images/Steve Dorsey.JPEG", }, 
@@ -176,9 +177,9 @@
     const track = document.getElementById("track");
     const stage = document.getElementById("stage");
 
-    const speed = Number(getComputedStyle(document.documentElement)
-      .getPropertyValue("--speed")) || 95;
+    const speed = Number(getComputedStyle(document.documentElement).getPropertyValue("--speed")) || 110;
 
+    // exactly 3 cards
     const cards = [];
     let spacing = 360;
 
@@ -195,81 +196,60 @@
     }
 
     function exitX() {
-      // right-side "fully off-screen" point relative to center
-      return stage.clientWidth / 2 + spacing * 1.2;
+      // how far from center until fully off-screen
+      return stage.clientWidth / 2 + spacing * 1.25;
     }
 
     function spawnLeftX() {
-      // ALWAYS spawn fully off-screen left (this is the fix)
-      return -exitX() - spacing;
+      // guaranteed off-screen left
+      return -exitX() - spacing * 1.1;
     }
 
     function clamp(v, a, b) {
       return Math.max(a, Math.min(b, v));
     }
 
-    // Make center bigger / edges fade
     function styleFromX(x) {
       const e = exitX();
       const t = 1 - clamp(Math.abs(x) / e, 0, 1);
       const ease = t * t * t;
 
       return {
-        scale: 0.78 + ease * 0.40,
-        opacity: 0.10 + ease * 0.90,
+        scale: 0.78 + ease * 0.42,    // center grows
+        opacity: 0.08 + ease * 0.92,  // edges fade
         z: Math.round(ease * 1000),
       };
     }
 
-    function nextOlderIndex(fromIndex) {
-      return (fromIndex + 1) % slides.length;
-    }
+    // ===== IMPORTANT FIX =====
+    // This pointer guarantees we cycle through ALL slides in order (newest -> oldest).
+    // Every time a card wraps, we assign the next slide and advance the pointer.
+    let nextFeedIndex = 0;
 
     function init() {
       resetSpacing();
       track.innerHTML = "";
       cards.length = 0;
 
-      // Start newest (slides[0]) in the CENTER
-      // Then older to the LEFT, oldest of the three further left (because movement is to the RIGHT)
-      //
-      // positions (moving right):
-      //   far-left (older2) -> left (older1) -> center (newest) -> right -> off
-      //
-      // To achieve that with ONLY 3 visible cards:
-      // place them at: -spacing, 0, +spacing
-      // and assign indices: center=0, left=1, far-left=2 (but far-left is not shown as separate slot; it's just the left card as it moves)
-      //
-      // With three cards:
-      //   left card shows "next older"
-      //   center card shows "current"
-      //   right card shows "previous newer" (context)
-      //
-      // But since you want count-down, we keep feeding older from the left.
-      //
-      // We'll start with:
-      //   x: -spacing -> slides[1]  (older)
-      //   x: 0        -> slides[0]  (newest)
-      //   x: +spacing -> slides[slides.length-1] (wrap newer context) OR slides[2] depending on preference
-      //
-      // To keep it chronologically clean left->center->right, we set right = slides[slides.length-1] (oldest) would be weird.
-      // Better: right = slides[2] (next older after left) BUT that makes right older than center which looks odd.
-      //
-      // So: right = slides[0] "just passed" isn't available at start. We'll simply use slides[2] as extra older context.
-      // The important part: the FEED from left is correct and continuous.
-      const start = [
+      // start with 3 consecutive slides in order:
+      // left: slides[1], center: slides[0], right: slides[2]
+      // center starts at newest
+      const initial = [
         { x: -spacing, idx: 1 },
         { x: 0,        idx: 0 },
         { x: spacing,  idx: 2 },
       ];
 
-      for (const s of start) {
+      for (const s of initial) {
         const el = document.createElement("div");
         el.className = "card";
         render(el, slides[s.idx]);
         track.appendChild(el);
         cards.push({ el, x: s.x, slideIndex: s.idx });
       }
+
+      // next slide to introduce after the initial three
+      nextFeedIndex = 3 % slides.length;
     }
 
     let last = performance.now();
@@ -278,28 +258,28 @@
       const dt = (now - last) / 1000;
       last = now;
 
-      // move right smoothly
+      // move right continuously
       for (const c of cards) c.x += speed * dt;
 
-      // If a card exits right, recycle it to OFF-SCREEN LEFT (the fix)
       const e = exitX();
+
       for (const c of cards) {
+        // when fully off the right, recycle
         if (c.x > e + spacing) {
-          // Find current leftmost visible card (smallest x)
-          const leftmost = cards.reduce((best, cur) => (cur.x < best.x ? cur : best), cards[0]);
+          // set new content (next older in sequence)
+          c.slideIndex = nextFeedIndex;
+          render(c.el, slides[nextFeedIndex]);
+          nextFeedIndex = (nextFeedIndex + 1) % slides.length;
 
-          // Feed the NEXT older slide after the leftmost's slideIndex
-          const newIdx = nextOlderIndex(leftmost.slideIndex);
-
-          c.slideIndex = newIdx;
-          render(c.el, slides[newIdx]);
-
-          // HARD set to off-screen left spawn point
-          c.x = spawnLeftX();
+          // place it OFF-SCREEN LEFT, BUT keep spacing nice:
+          // put it one spacing unit left of the current leftmost, then ensure it's off-screen.
+          const minX = Math.min(...cards.map(k => k.x));
+          const candidate = minX - spacing;
+          c.x = (candidate > -e) ? spawnLeftX() : candidate;
         }
       }
 
-      // Style + transform
+      // style and position
       for (const c of cards) {
         const { scale, opacity, z } = styleFromX(c.x);
         c.el.style.zIndex = z;
@@ -312,7 +292,6 @@
     }
 
     window.addEventListener("resize", () => {
-      // keep spacing responsive
       resetSpacing();
     });
 
