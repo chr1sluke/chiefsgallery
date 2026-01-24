@@ -7,11 +7,13 @@
 
   <style>
     :root {
-      --bg: #070b14;
+      --bg: #5a0f1a;
+      --bg-dark: #3e0a12;
+      --gold: #d4af37;
       --cardW: 280px;
       --cardH: 380px;
       --radius: 18px;
-      --speed: 95; /* px/sec */
+      --speed: 95;
     }
 
     * { box-sizing: border-box; }
@@ -19,8 +21,12 @@
 
     body {
       background:
-        radial-gradient(900px 520px at 50% 32%, rgba(90,110,170,0.22), transparent 60%),
-        linear-gradient(180deg, #050713, var(--bg));
+        radial-gradient(
+          900px 520px at 50% 28%,
+          rgba(255,255,255,0.08),
+          transparent 60%
+        ),
+        linear-gradient(180deg, var(--bg), var(--bg-dark));
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       color: white;
       overflow: hidden;
@@ -29,25 +35,45 @@
       align-items: center;
     }
 
+    /* ===== HEADER ===== */
     .header {
       text-align: center;
-      margin-top: 28px;
-      margin-bottom: 16px;
+      margin-top: 30px;
+      margin-bottom: 18px;
       user-select: none;
     }
+
     .unit {
-      font-size: 36px;
-      font-weight: 800;
-      letter-spacing: 3px;
+      font-size: 56px;
+      font-weight: 900;
+      letter-spacing: 6px;
     }
+
     .subtitle {
-      margin-top: 4px;
-      font-size: 14px;
-      letter-spacing: 4px;
-      opacity: 0.7;
+      margin-top: 6px;
+      font-size: 18px;
+      letter-spacing: 6px;
+      opacity: 0.85;
       text-transform: uppercase;
     }
 
+    /* ===== GOLD DIVIDER ===== */
+    .divider {
+      width: 260px;
+      height: 2px;
+      margin: 18px auto 26px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        var(--gold),
+        transparent
+      );
+      box-shadow:
+        0 0 6px rgba(212,175,55,0.6),
+        0 0 12px rgba(212,175,55,0.35);
+    }
+
+    /* ===== STAGE ===== */
     .stage {
       width: min(1200px, 96vw);
       height: 560px;
@@ -64,13 +90,15 @@
       z-index: 5;
       pointer-events: none;
     }
+
     .stage::before {
       left: 0;
-      background: linear-gradient(90deg, rgba(5,7,12,0.98), rgba(5,7,12,0));
+      background: linear-gradient(90deg, var(--bg-dark), rgba(0,0,0,0));
     }
+
     .stage::after {
       right: 0;
-      background: linear-gradient(270deg, rgba(5,7,12,0.98), rgba(5,7,12,0));
+      background: linear-gradient(270deg, var(--bg-dark), rgba(0,0,0,0));
     }
 
     .track {
@@ -96,8 +124,8 @@
       height: var(--cardH);
       border-radius: var(--radius);
       overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
     }
 
     .image img {
@@ -109,20 +137,23 @@
 
     .name {
       margin-top: 10px;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 0.2px;
+      letter-spacing: 0.3px;
     }
 
     .years {
       margin-top: 4px;
-      font-size: 12px;
-      opacity: 0.78;
-      letter-spacing: 0.3px;
+      font-size: 13px;
+      opacity: 0.85;
+      letter-spacing: 0.4px;
     }
 
     @media (max-width: 760px) {
       :root { --cardW: 220px; --cardH: 300px; }
+      .unit { font-size: 44px; }
+      .subtitle { font-size: 16px; }
+      .divider { width: 200px; }
     }
   </style>
 </head>
@@ -131,6 +162,7 @@
   <div class="header">
     <div class="unit">2-01</div>
     <div class="subtitle">over the years</div>
+    <div class="divider"></div>
   </div>
 
   <div class="stage" id="stage">
@@ -138,7 +170,6 @@
   </div>
 
   <script>
-    // Use your list exactly as-is. We are NOT enforcing chronological order anymore.
     const slides = [
       { name: "Alton C Rowe, Sr.", years: "1911-1933", src: "images/Alton Rowe Sr.JPEG" },
       { name: "F. Harris Patterson", years: "1934-1939", src: "images/F. Harris Patterson.JPEG" },
@@ -166,37 +197,29 @@
       { name: "David N. Languish", years: "2003-2004", src: "images/Dave.JPEG" },
       { name: "Stephen P. Dorsey", years: "2010-2011", src: "images/Steve Dorsey.JPEG" },
       { name: "Arlie Hedges", years: "", src: "images/Arlie Hedges.JPEG" },
-      { name: "Daniel J. Ryan, Jr.", years: "2001", src: "images/Dan Ryan Jr.JPEG" }
+      { name: "Daniel J. Ryan, Jr.", years: "Present", src: "images/Dan Ryan Jr.JPEG" }
     ];
 
     const track = document.getElementById("track");
     const stage = document.getElementById("stage");
-    const speed = Number(getComputedStyle(document.documentElement).getPropertyValue("--speed")) || 95;
+    const speed = 95;
+
+    let spacing = 360;
+    let nextIndex = 0;
+    const cards = [];
 
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-    let spacing = 360;
-
-    function computeSpacing() {
-      spacing = Math.min(440, Math.max(320, stage.clientWidth * 0.30));
-    }
-
-    function exitX() {
-      return stage.clientWidth / 2 + spacing * 1.35;
-    }
-
-    function spawnLeftX() {
-      return -exitX() - spacing * 1.25;
-    }
+    function exitX() { return stage.clientWidth / 2 + spacing * 1.4; }
+    function spawnLeftX() { return -exitX() - spacing; }
 
     function styleFromX(x) {
       const e = exitX();
       const t = 1 - clamp(Math.abs(x) / e, 0, 1);
       const ease = t * t * t;
-
       return {
-        scale: 0.78 + ease * 0.45,
-        opacity: 0.08 + ease * 0.92,
+        scale: 0.8 + ease * 0.45,
+        opacity: 0.1 + ease * 0.9,
         z: Math.round(ease * 1000),
       };
     }
@@ -209,59 +232,39 @@
       `;
     }
 
-    const cards = [];
-    let nextIndex = 0;
-
     function build() {
-      computeSpacing();
       track.innerHTML = "";
       cards.length = 0;
+      const count = Math.min(slides.length, 10);
+      let x = spawnLeftX();
 
-      // enough cards to fill screen + a little buffer
-      const cardCount = Math.min(slides.length, 10);
-
-      // create a belt from offscreen-left to offscreen-right
-      const startX = spawnLeftX();
-      for (let i = 0; i < cardCount; i++) {
+      for (let i = 0; i < count; i++) {
         const el = document.createElement("div");
         el.className = "card";
-
-        const idx = nextIndex % slides.length;
-        render(el, slides[idx]);
+        render(el, slides[nextIndex]);
         nextIndex = (nextIndex + 1) % slides.length;
-
-        const x = startX + i * spacing;
         track.appendChild(el);
         cards.push({ el, x });
+        x += spacing;
       }
     }
 
     let last = performance.now();
-
     function tick(now) {
       const dt = (now - last) / 1000;
       last = now;
 
-      const e = exitX();
-
-      // move everything right
       for (const c of cards) c.x += speed * dt;
 
-      // recycle cards that leave right edge
       for (const c of cards) {
-        if (c.x > e + spacing) {
-          // put it behind the current leftmost card
+        if (c.x > exitX()) {
           const minX = Math.min(...cards.map(k => k.x));
           c.x = minX - spacing;
-
-          // load next slide in a simple repeating cycle
-          const idx = nextIndex % slides.length;
-          render(c.el, slides[idx]);
+          render(c.el, slides[nextIndex]);
           nextIndex = (nextIndex + 1) % slides.length;
         }
       }
 
-      // draw
       for (const c of cards) {
         const { scale, opacity, z } = styleFromX(c.x);
         c.el.style.zIndex = z;
@@ -272,12 +275,6 @@
 
       requestAnimationFrame(tick);
     }
-
-    window.addEventListener("resize", () => {
-      // rebuild belt to avoid overlap after resizing
-      nextIndex = 0;
-      build();
-    });
 
     build();
     requestAnimationFrame(tick);
