@@ -11,6 +11,9 @@
       --cardW: 280px;
       --cardH: 380px;
       --radius: 18px;
+
+      --stepMs: 2800;   /* time between shifts */
+      --moveMs: 900;    /* animation duration */
     }
 
     * { box-sizing: border-box; }
@@ -33,14 +36,13 @@
       text-align: center;
       margin-top: 28px;
       margin-bottom: 16px;
+      user-select: none;
     }
-
     .unit {
       font-size: 36px;
       font-weight: 800;
       letter-spacing: 3px;
     }
-
     .subtitle {
       margin-top: 4px;
       font-size: 14px;
@@ -56,14 +58,38 @@
       position: relative;
     }
 
+    /* edge fade */
+    .stage::before,
+    .stage::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 22%;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .stage::before {
+      left: 0;
+      background: linear-gradient(90deg, rgba(5,7,12,0.98), rgba(5,7,12,0));
+    }
+    .stage::after {
+      right: 0;
+      background: linear-gradient(270deg, rgba(5,7,12,0.98), rgba(5,7,12,0));
+    }
+
     .card {
       position: absolute;
       top: 50%;
+      left: 50%;
       width: var(--cardW);
       text-align: center;
       transform-origin: center;
-      transition: transform 0.8s ease, opacity 0.8s ease;
+      will-change: transform, opacity;
       filter: drop-shadow(0 30px 90px rgba(0,0,0,0.55));
+      transition:
+        transform var(--moveMs) cubic-bezier(.2,.8,.2,1),
+        opacity   var(--moveMs) cubic-bezier(.2,.8,.2,1);
     }
 
     .image {
@@ -94,46 +120,65 @@
       opacity: 0.75;
     }
 
-    /* positional states */
-    .left {
-      left: 50%;
-      transform: translate(-180%, -50%) scale(0.8);
-      opacity: 0.4;
+    /* ===== positions =====
+       Motion direction: left -> center -> right -> offRight
+       Center progresses NEWEST -> OLDER by shifting left into center each step.
+    */
+    .pos-left {
+      transform: translate(calc(-50% - 360px), -50%) scale(0.84);
+      opacity: 0.45;
       z-index: 1;
     }
-
-    .center {
-      left: 50%;
-      transform: translate(-50%, -50%) scale(1);
+    .pos-center {
+      transform: translate(-50%, -50%) scale(1.05);
       opacity: 1;
       z-index: 3;
     }
-
-    .right {
-      left: 50%;
-      transform: translate(80%, -50%) scale(0.8);
-      opacity: 0.4;
+    .pos-right {
+      transform: translate(calc(-50% + 360px), -50%) scale(0.84);
+      opacity: 0.45;
       z-index: 1;
+    }
+    .pos-offRight {
+      transform: translate(calc(-50% + 760px), -50%) scale(0.78);
+      opacity: 0;
+      z-index: 0;
+    }
+    .pos-offLeft {
+      transform: translate(calc(-50% - 760px), -50%) scale(0.78);
+      opacity: 0;
+      z-index: 0;
+    }
+
+    /* when we "teleport" a card back to the left, we temporarily disable transitions */
+    .no-anim {
+      transition: none !important;
+    }
+
+    @media (max-width: 760px) {
+      :root { --cardW: 220px; --cardH: 300px; }
+      .pos-left  { transform: translate(calc(-50% - 280px), -50%) scale(0.84); }
+      .pos-right { transform: translate(calc(-50% + 280px), -50%) scale(0.84); }
+      .pos-offRight { transform: translate(calc(-50% + 640px), -50%) scale(0.78); }
+      .pos-offLeft  { transform: translate(calc(-50% - 640px), -50%) scale(0.78); }
     }
   </style>
 </head>
 
 <body>
-  <!-- TITLE -->
   <div class="header">
     <div class="unit">2-01</div>
     <div class="subtitle">over the years</div>
   </div>
 
-  <!-- STAGE -->
   <div class="stage">
-    <div id="left" class="card left"></div>
-    <div id="center" class="card center"></div>
-    <div id="right" class="card right"></div>
+    <div id="cardA" class="card"></div>
+    <div id="cardB" class="card"></div>
+    <div id="cardC" class="card"></div>
   </div>
 
   <script>
-    /* ========= DATA (NEWEST → OLDEST) ========= */
+    // NEWEST -> OLDEST (center will count down)
     const slides = [
       { name: "Daniel J. Ryan, Jr.", years: "2-01", src: "images/Dan Ryan Jr.JPEG", },
       { name: "Stephen P. Dorsey", years: "2010-2011", src: "images/Steve Dorsey.JPEG", }, 
@@ -164,12 +209,13 @@
       { name: "F. Harris Patterson", years: "1934–1939", src: "images/F. Harris Patterson.JPEG" },
       { name: "Alton C. Rowe, Sr.", years: "1911–1933", src: "images/Alton Rowe Sr.JPEG" }
     ];
-    
-    const left = document.getElementById("left");
-    const center = document.getElementById("center");
-    const right = document.getElementById("right");
 
-    let index = 0;
+    const stepMs = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--stepMs')) || 2800;
+    const moveMs = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--moveMs')) || 900;
+
+    const cardA = document.getElementById('cardA');
+    const cardB = document.getElementById('cardB');
+    const cardC = document.getElementById('cardC');
 
     function render(card, slide) {
       card.innerHTML = `
@@ -179,21 +225,70 @@
       `;
     }
 
-    function update() {
-      const prev = slides[index + 1] || null;
-      const curr = slides[index];
-      const next = slides[index - 1] || null;
+    // We maintain 3 cards. The center advances NEWEST -> OLDER each step.
+    // Mapping:
+    // left  = next (older) that will become center
+    // center= current
+    // right = previous (newer) that just left center
+    let idx = 0; // current (center) index in slides (starts NEWEST)
 
-      if (prev) render(left, prev); else left.innerHTML = "";
-      render(center, curr);
-      if (next) render(right, next); else right.innerHTML = "";
+    // Initial fill:
+    // center = slides[0]
+    // left   = slides[1]
+    // right  = slides[2]
+    function init() {
+      const centerSlide = slides[idx % slides.length];
+      const leftSlide   = slides[(idx + 1) % slides.length];
+      const rightSlide  = slides[(idx + 2) % slides.length];
 
-      index++;
-      if (index >= slides.length) index = 0;
+      render(cardA, leftSlide);
+      render(cardB, centerSlide);
+      render(cardC, rightSlide);
+
+      cardA.className = 'card pos-left';
+      cardB.className = 'card pos-center';
+      cardC.className = 'card pos-right';
     }
 
-    update();
-    setInterval(update, 3000); // change every 3 seconds
+    function shiftOnce() {
+      // Move: left -> center -> right -> offRight
+      const leftEl = document.querySelector('.pos-left');
+      const centerEl = document.querySelector('.pos-center');
+      const rightEl = document.querySelector('.pos-right');
+
+      // Animate positions
+      leftEl.classList.remove('pos-left');   leftEl.classList.add('pos-center');
+      centerEl.classList.remove('pos-center'); centerEl.classList.add('pos-right');
+      rightEl.classList.remove('pos-right'); rightEl.classList.add('pos-offRight');
+
+      // After animation completes, recycle the offRight card to become new left
+      window.setTimeout(() => {
+        // rightEl is currently offRight and invisible, we recycle it.
+        // Advance timeline: center becomes next older => idx++
+        idx = (idx + 1) % slides.length;
+
+        const newLeftIndex = (idx + 1) % slides.length; // next older after new center
+        const newLeftSlide = slides[newLeftIndex];
+
+        // Teleport offRight card to offLeft (no animation), update content, then move to left
+        rightEl.classList.add('no-anim');
+        rightEl.classList.remove('pos-offRight');
+        rightEl.classList.add('pos-offLeft');
+
+        render(rightEl, newLeftSlide);
+
+        // force reflow so the browser applies no-anim position first
+        rightEl.offsetHeight;
+
+        // Put it into left position, then re-enable animation for next cycle
+        rightEl.classList.remove('pos-offLeft');
+        rightEl.classList.add('pos-left');
+        rightEl.classList.remove('no-anim');
+      }, moveMs + 20);
+    }
+
+    init();
+    setInterval(shiftOnce, stepMs);
   </script>
 </body>
 </html>
