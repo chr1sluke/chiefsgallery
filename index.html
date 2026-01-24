@@ -1,371 +1,208 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sliding Gallery</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2-01 · Over the Years</title>
 
-    <style>
-      :root {
-        --bg: #070b14;
-        --cardW: 280px;
-        --cardH: 380px;
-        --radius: 18px;
-        --speed: 85;
+  <style>
+    :root {
+      --bg: #070b14;
+      --cardW: 280px;
+      --cardH: 380px;
+      --radius: 18px;
+      --speed: 70;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+
+    body {
+      background:
+        radial-gradient(900px 520px at 50% 32%, rgba(90,110,170,0.22), transparent 60%),
+        linear-gradient(180deg, #050713, var(--bg));
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: white;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ===== TITLE ===== */
+    .header {
+      text-align: center;
+      margin-top: 28px;
+      margin-bottom: 12px;
+    }
+
+    .unit {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: 3px;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      font-size: 14px;
+      letter-spacing: 4px;
+      opacity: 0.7;
+      text-transform: uppercase;
+    }
+
+    /* ===== STAGE ===== */
+    .stage {
+      width: min(1200px, 96vw);
+      height: 560px;
+      position: relative;
+      margin-top: 10px;
+    }
+
+    .track {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: var(--cardW);
+      text-align: center;
+      transform-origin: center;
+      will-change: transform, opacity;
+      filter: drop-shadow(0 30px 90px rgba(0,0,0,0.55));
+    }
+
+    .image {
+      width: 100%;
+      height: var(--cardH);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .name {
+      margin-top: 10px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .years {
+      margin-top: 4px;
+      font-size: 12px;
+      opacity: 0.75;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <div class="unit">2-01</div>
+    <div class="subtitle">over the years</div>
+  </div>
+
+  <div class="stage">
+    <div class="track" id="track"></div>
+  </div>
+
+  <script>
+    /* ========= DATA (NEWEST → OLDEST) ========= */
+    const slides = [
+      { name: "Daniel J. Ryan, Jr.", years: "2-01", src: "images/Dan Ryan Jr.JPEG", },
+      { name: "Stephen P. Dorsey", years: "2010-2011", src: "images/Steve Dorsey.JPEG", }, 
+      { name: "Arlie Hedges", years: "", src: "images/Arlie Hedges.JPEG", },
+      { name: "David N. Languish", years: "2003-2004", src: "images/Dave.JPEG", },
+      { name: "Robert D. Lemieux", years: "2001-2002", src: "images/Robert Lemieux.JPEG", },
+      { name: "Stephen P. Dorsey", years: "2010–2011", src: "images/Steve Dorsey.JPEG" },
+      { name: "Gregory R. Gould", years: "1999–2001, 2008–2009", src: "images/Gregory Gould .JPEG" },
+      { name: "David A. Scoond", years: "1997-1999", src: "images/David Scoons.JPEG" },
+      { name: "James W. Kerr", years: "1993–1997, 2005–2007", src: "images/James W Kerr.JPEG" },
+      { name: "Donald F. Cooke, Jr.", years: "1989–1993", src: "images/Donald Cooke Jr.JPEG" },
+      { name: "Paul R. Woodin", years: "1987–1989", src: "images/Paul Woodin.JPEG" },
+      { name: "Amos J. Bastiani", years: "1985–1987", src: "images/Amos Bastiani.JPEG" },
+      { name: "Louis P. Dilillo", years: "1982–1985", src: "images/Louis Dilillo .JPEG" },
+      { name: "William E. Wright, Jr.", years: "1978–1979", src: "images/William Wright Jr.JPEG" },
+      { name: "James L. Cooke", years: "1975–1978, 1979–1982", src: "images/James Cooke.JPEG" },
+      { name: "Gerald J. Day", years: "1966–1975", src: "images/Gerald J Day.JPEG" },
+      { name: "Henry L. Kleinke", years: "1962–1966", src: "images/Henry Kleinke.JPEG" },
+      { name: "Edward D. Packenham", years: "1961", src: "images/Edward Packenham.JPEG" },
+      { name: "Blake Case", years: "1956–1960", src: "images/Blake Case.JPEG" },
+      { name: "Paul R. Woodin, Sr.", years: "1955", src: "images/Paul Woodin Sr.JPEG" },
+      { name: "Edward J. Adams, Jr.", years: "1952–1954", src: "images/Edward Adams.JPEG" },
+      { name: "Charles Sutter", years: "1951", src: "images/Charles Sutter.JPEG" },
+      { name: "Charles C. Myers, Sr.", years: "1948–1950", src: "images/Charles Myers, Sr.JPEG" },
+      { name: "John A. Hotaling", years: "1946–1947", src: "images/John Hotaling.JPEG" },
+      { name: "Leonard C. Smith", years: "1944–1945", src: "images/Leonard Smith.JPEG" },
+      { name: "Bradford B. Banfield", years: "1939–1944", src: "images/Bradford Banfield.JPEG" },
+      { name: "F. Harris Patterson", years: "1934–1939", src: "images/F. Harris Patterson.JPEG" },
+      { name: "Alton C. Rowe, Sr.", years: "1911–1933", src: "images/Alton Rowe Sr.JPEG" }
+    ];
+
+    const track = document.getElementById("track");
+    const spacing = 320;
+    let current = 0;
+    const cards = [];
+
+    function createCard(slide) {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.innerHTML = `
+        <div class="image"><img src="${slide.src}"></div>
+        <div class="name">${slide.name}</div>
+        <div class="years">${slide.years}</div>
+      `;
+      track.appendChild(el);
+      return el;
+    }
+
+    /* preload 3 cards */
+    for (let i = 0; i < 3; i++) {
+      cards.push({ el: createCard(slides[i]), offset: i - 1 });
+    }
+
+    let last = performance.now();
+
+    function tick(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+
+      for (const c of cards) {
+        c.offset += dt * 0.6;
+
+        const x = c.offset * spacing;
+        const dist = Math.abs(c.offset);
+        const scale = 1 - Math.min(dist * 0.2, 0.4);
+        const opacity = 1 - Math.min(dist * 0.5, 0.7);
+
+        c.el.style.transform =
+          `translate(calc(-50% + ${x}px), -50%) scale(${scale})`;
+        c.el.style.opacity = opacity;
       }
 
-      * { box-sizing: border-box; }
-      html, body { height: 100%; margin: 0; }
+      if (cards[0].offset > 1.5) {
+        const old = cards.shift();
+        track.removeChild(old.el);
 
-      body {
-        background:
-          radial-gradient(900px 520px at 50% 32%, rgba(90,110,170,0.22), transparent 60%),
-          linear-gradient(180deg, #050713, var(--bg));
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        color: white;
-        overflow: hidden;
-        display: grid;
-        place-items: center;
+        current++;
+        if (current >= slides.length) current = 0;
+
+        const next = slides[current];
+        cards.push({ el: createCard(next), offset: -1.5 });
       }
 
-      .stage {
-        width: min(1200px, 96vw);
-        height: 560px;
-        position: relative;
-      }
-
-      .stage::before,
-      .stage::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        height: 100%;
-        width: 22%;
-        z-index: 5;
-        pointer-events: none;
-      }
-      .stage::before {
-        left: 0;
-        background: linear-gradient(90deg, rgba(5,7,12,0.98), rgba(5,7,12,0));
-      }
-      .stage::after {
-        right: 0;
-        background: linear-gradient(270deg, rgba(5,7,12,0.98), rgba(5,7,12,0));
-      }
-
-      .track {
-        position: relative;
-        width: 100%;
-        height: 100%;
-      }
-
-      .card {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: var(--cardW);
-        transform-origin: center center;
-        will-change: transform, opacity;
-        filter: drop-shadow(0 30px 90px rgba(0,0,0,0.55));
-        text-align: center;
-      }
-
-      .image {
-        width: 100%;
-        height: var(--cardH);
-        border-radius: var(--radius);
-        overflow: hidden;
-        border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(255,255,255,0.05);
-      }
-
-      .image img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .text {
-        margin-top: 10px;
-        line-height: 1.2;
-      }
-
-      .name {
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: 0.3px;
-      }
-
-      .years {
-        margin-top: 4px;
-        font-size: 12px;
-        letter-spacing: 0.4px;
-        opacity: 0.8; /* IMPORTANT: more visible */
-      }
-
-      @media (max-width: 760px) {
-        :root {
-          --cardW: 220px;
-          --cardH: 300px;
-        }
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="stage" id="stage">
-      <div class="track" id="track"></div>
-    </div>
-
-    <script>
-      const slides = [
-        {
-          name: "Alton C Rowe, Sr.",
-          years: "1911-1933",
-          src: "images/Alton Rowe Sr.JPEG",
-        },
-        {
-          name: "F. Harris Patterson",
-          years: "1934-1939",
-          src: "images/F. Harris Patterson.JPEG",
-        },
-        {
-          name: "Bradford B. Banfield",
-          years: "1939-1944",
-          src: "images/Bradford Banfield.JPEG",
-        },
-        {
-        name: "Leonard C. Smith",
-          years: "1944-1945",
-          src: "images/Leonard Smith.JPEG",
-        },
-        {
-        name: "John A. Hotaling",
-          years: "1946-1947",
-          src: "images/John Hotaling.JPEG",
-        },
-        {
-        name: "Charles C. Myers, Sr.",
-          years: "1948-1950",
-          src: "images/Charles Myers, Sr.JPEG",
-        },
-        {
-        name: "Charles Sutter",
-          years: "1951",
-          src: "images/Charles Sutter.JPEG",
-        },
-        {
-        name: "Edward J. Adams, Jr.",
-          years: "1952-1954",
-          src: "images/Edward Adams.JPEG",
-        },
-        {
-        name: "Paul R. Woodin, Sr.",
-          years: "1955",
-          src: "images/Paul Woodin Sr.JPEG",
-        },
-        {
-        name: "Blake Case",
-          years: "1956-1960",
-          src: "images/Blake Case.JPEG",
-        },
-        {
-        name: "Edward D. Packenham",
-          years: "1961",
-          src: "images/Edward Packenham.JPEG",
-        },
-        {
-        name: "Henry L. Kleinke",
-          years: "1962-1966",
-          src: "images/Henry Kleinke.JPEG",
-        },
-        {
-        name: "Gerald J. Day",
-          years: "1966-1975",
-          src: "images/Gerald Day.JPEG",
-        },
-        {
-        name: "James L. Cooke",
-          years: "1975-1978, 1979-1982",
-          src: "images/James Cooke.JPEG",
-        },
-        {
-        name: "William E. Wright, Jr.",
-          years: "1978-1979",
-          src: "images/William Wright Jr.JPEG",
-        },
-        {
-        name: "Louis P. Dilillo",
-          years: "1982-1985",
-          src: "images/Louis Dilillo .JPEG",
-        },
-        {
-        name: "Amos J. Bastiani",
-          years: "1985-1987",
-          src: "images/Amos Bastiani.JPEG",
-        },
-        {
-        name: "Paul R. Woodin",
-          years: "1987-1989",
-          src: "images/Paul Woodin.JPEG",
-        },
-        {
-        name: "Donald F. Cooke, Jr.",
-          years: "1989-1993",
-          src: "images/Donald Cooke Jr.JPEG",
-        },
-        {
-        name: "James W. Kerr",
-          years: "1993-1997, 2005-2007",
-          src: "images/James W Kerr.JPEG",
-        },
-        {
-        name: "David A. Scoons",
-          years: "1997-1999",
-          src: "images/David Scoons.JPEG",
-        },
-        {
-        name: "Gregory R. Gould",
-          years: "1999-2001, 2008-2009",
-          src: "images/Gregory Gould .JPEG",
-        },
-        {
-        name: "Robert D. Lemieux",
-          years: "2001-2002",
-          src: "images/Robert Lemieux.JPEG",
-        },
-        {
-        name: "John A. Hotaling",
-          years: "1946-1947",
-          src: "images/John Hotaling.JPEG",
-        },
-        {
-        name: "David N. Languish",
-          years: "2003-2004",
-          src: "images/Dave.JPEG",
-        },
-        {
-        name: "Stephen P. Dorsey",
-          years: "2010-2011",
-          src: "images/Steve Dorsey.JPEG",
-        },
-        {
-        name: "Arlie Hedges",
-          years: "",
-          src: "images/Arlie Hedges.JPEG",
-        },
-        {
-        name: "Daniel J. Ryan, Jr.",
-          years: "2-01",
-          src: "images/Dan Ryan Jr..JPEG",
-        },
-      ];
-
-      const track = document.getElementById("track");
-      const stage = document.getElementById("stage");
-
-      const CARD_COUNT = Math.max(slides.length, 7);
-      let spacing = 320;
-      let speed = Number(getComputedStyle(document.documentElement)
-        .getPropertyValue("--speed")) || 85;
-
-      function exitX() {
-        return stage.clientWidth / 2 + spacing * 1.2;
-      }
-
-      const cards = [];
-
-      for (let i = 0; i < CARD_COUNT; i++) {
-        const slide = slides[i % slides.length];
-
-        const card = document.createElement("div");
-        card.className = "card";
-
-        const image = document.createElement("div");
-        image.className = "image";
-
-        const img = document.createElement("img");
-        img.src = slide.src;
-        img.alt = slide.name;
-
-        const text = document.createElement("div");
-        text.className = "text";
-
-        const name = document.createElement("div");
-        name.className = "name";
-        name.textContent = slide.name;
-
-        const years = document.createElement("div");
-        years.className = "years";
-        years.textContent = slide.years;
-
-        image.appendChild(img);
-        text.appendChild(name);
-        text.appendChild(years);
-        card.appendChild(image);
-        card.appendChild(text);
-        track.appendChild(card);
-
-        cards.push({ el: card, x: 0, index: i % slides.length });
-      }
-
-      function reset() {
-        spacing = Math.min(360, Math.max(260, stage.clientWidth / 3));
-        const start = -exitX() - spacing * 2;
-        cards.forEach((c, i) => c.x = start + i * spacing);
-      }
-
-      function clamp(v, a, b) {
-        return Math.max(a, Math.min(b, v));
-      }
-
-      function styleFromX(x) {
-        const e = exitX();
-        const t = 1 - clamp(Math.abs(x) / e, 0, 1);
-        const ease = t * t * t;
-
-        return {
-          scale: 0.75 + ease * 0.55,
-          opacity: 0.2 + ease * 0.8,
-          z: Math.round(ease * 1000),
-        };
-      }
-
-      let last = performance.now();
-
-      function tick(now) {
-        const dt = (now - last) / 1000;
-        last = now;
-
-        for (const c of cards) {
-          c.x += speed * dt;
-
-          if (c.x > exitX() + spacing) {
-            const minX = Math.min(...cards.map(k => k.x));
-            c.x = minX - spacing;
-
-            c.index = (c.index + cards.length) % slides.length;
-            const slide = slides[c.index];
-
-            c.el.querySelector("img").src = slide.src;
-            c.el.querySelector(".name").textContent = slide.name;
-            c.el.querySelector(".years").textContent = slide.years;
-          }
-
-          const { scale, opacity, z } = styleFromX(c.x);
-          c.el.style.zIndex = z;
-          c.el.style.opacity = opacity;
-          c.el.style.transform =
-            `translate(calc(-50% + ${c.x}px), -50%) scale(${scale})`;
-        }
-
-        requestAnimationFrame(tick);
-      }
-
-      window.addEventListener("resize", reset);
-      reset();
       requestAnimationFrame(tick);
-    </script>
-  </body>
+    }
+
+    requestAnimationFrame(tick);
+  </script>
+</body>
 </html>
