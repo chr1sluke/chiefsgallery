@@ -12,10 +12,10 @@
       --gold: #d4af37;
 
       /* BIGGER CARDS */
-      --cardW: 340px;
-      --cardH: 460px;
+      --cardW: 420px;
+      --cardH: 560px;
 
-      --radius: 18px;
+      --radius: 20px;
       --speed: 95;
     }
 
@@ -25,9 +25,9 @@
     body {
       background:
         radial-gradient(
-          900px 520px at 50% 28%,
+          1000px 600px at 50% 26%,
           rgba(255,255,255,0.08),
-          transparent 60%
+          transparent 62%
         ),
         linear-gradient(180deg, var(--bg), var(--bg-dark));
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -41,13 +41,13 @@
     /* ===== HEADER ===== */
     .header {
       text-align: center;
-      margin-top: 30px;
-      margin-bottom: 18px;
+      margin-top: 26px;
+      margin-bottom: 16px;
       user-select: none;
     }
 
     .unit {
-      font-size: 64px;
+      font-size: 66px;
       font-weight: 900;
       letter-spacing: 6px;
     }
@@ -61,15 +61,10 @@
     }
 
     .divider {
-      width: 300px;
+      width: 320px;
       height: 2px;
-      margin: 18px auto 26px;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        var(--gold),
-        transparent
-      );
+      margin: 16px auto 22px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
       box-shadow:
         0 0 6px rgba(212,175,55,0.6),
         0 0 12px rgba(212,175,55,0.35);
@@ -77,30 +72,69 @@
 
     /* ===== STAGE ===== */
     .stage {
-      width: min(1400px, 96vw);
-      height: 640px;
+      width: min(1600px, 96vw);
+      height: 760px;
       position: relative;
     }
 
+    /* Curtain overlays */
     .stage::before,
     .stage::after {
       content: "";
       position: absolute;
       top: 0;
       height: 100%;
-      width: 22%;
+      width: 24%;
       z-index: 5;
       pointer-events: none;
+      will-change: transform, opacity;
+      filter: blur(0.2px);
     }
 
+    /* left curtain */
     .stage::before {
       left: 0;
-      background: linear-gradient(90deg, var(--bg-dark), rgba(0,0,0,0));
+      background:
+        radial-gradient(80% 140% at 0% 50%,
+          rgba(0,0,0,0.35),
+          rgba(0,0,0,0.18) 40%,
+          rgba(0,0,0,0.00) 75%
+        ),
+        linear-gradient(90deg,
+          rgba(62,10,18,0.95),
+          rgba(62,10,18,0.55),
+          rgba(0,0,0,0)
+        );
+      animation: curtainLeft 5.6s ease-in-out infinite;
+      transform-origin: left center;
     }
 
+    /* right curtain */
     .stage::after {
       right: 0;
-      background: linear-gradient(270deg, var(--bg-dark), rgba(0,0,0,0));
+      background:
+        radial-gradient(80% 140% at 100% 50%,
+          rgba(0,0,0,0.35),
+          rgba(0,0,0,0.18) 40%,
+          rgba(0,0,0,0.00) 75%
+        ),
+        linear-gradient(270deg,
+          rgba(62,10,18,0.95),
+          rgba(62,10,18,0.55),
+          rgba(0,0,0,0)
+        );
+      animation: curtainRight 6.2s ease-in-out infinite;
+      transform-origin: right center;
+    }
+
+    @keyframes curtainLeft {
+      0%, 100% { opacity: 0.92; transform: translateX(0px) scaleX(1); }
+      50%      { opacity: 0.78; transform: translateX(10px) scaleX(0.97); }
+    }
+
+    @keyframes curtainRight {
+      0%, 100% { opacity: 0.92; transform: translateX(0px) scaleX(1); }
+      50%      { opacity: 0.78; transform: translateX(-10px) scaleX(0.97); }
     }
 
     .track {
@@ -117,7 +151,7 @@
       text-align: center;
       transform-origin: center;
       will-change: transform, opacity;
-      filter: drop-shadow(0 30px 90px rgba(0,0,0,0.55));
+      filter: drop-shadow(0 34px 110px rgba(0,0,0,0.58));
       pointer-events: none;
     }
 
@@ -126,7 +160,7 @@
       height: var(--cardH);
       border-radius: var(--radius);
       overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.20);
       background: rgba(255,255,255,0.06);
     }
 
@@ -138,24 +172,25 @@
     }
 
     .name {
-      margin-top: 12px;
-      font-size: 18px;
-      font-weight: 700;
+      margin-top: 14px;
+      font-size: 20px;
+      font-weight: 800;
       letter-spacing: 0.3px;
     }
 
     .years {
-      margin-top: 4px;
-      font-size: 14px;
-      opacity: 0.85;
+      margin-top: 5px;
+      font-size: 15px;
+      opacity: 0.86;
       letter-spacing: 0.4px;
     }
 
     @media (max-width: 760px) {
-      :root { --cardW: 260px; --cardH: 360px; }
-      .unit { font-size: 48px; }
+      :root { --cardW: 280px; --cardH: 380px; }
+      .stage { height: 620px; }
+      .unit { font-size: 50px; }
       .subtitle { font-size: 16px; }
-      .divider { width: 220px; }
+      .divider { width: 240px; }
     }
   </style>
 </head>
@@ -178,20 +213,42 @@
       { name: "Bradford B. Banfield", years: "1939-1944", src: "images/Bradford Banfield.JPEG" },
       { name: "Leonard C. Smith", years: "1944-1945", src: "images/Leonard Smith.JPEG" },
       { name: "John A. Hotaling", years: "1946-1947", src: "images/John Hotaling.JPEG" },
+      { name: "Charles C. Myers, Sr.", years: "1948-1950", src: "images/Charles Myers, Sr.JPEG" },
       { name: "Charles Sutter", years: "1951", src: "images/Charles Sutter.JPEG" },
+      { name: "Edward J. Adams, Jr.", years: "1952-1954", src: "images/Edward Adams.JPEG" },
+      { name: "Paul R. Woodin, Sr.", years: "1955", src: "images/Paul Woodin Sr.JPEG" },
       { name: "Blake Case", years: "1956-1960", src: "images/Blake Case.JPEG" },
-      { name: "David N. Languish", years: "2003-2004", src: "images/Dave.JPEG" }
+      { name: "Edward D. Packenham", years: "1961", src: "images/Edward Packenham.JPEG" },
+      { name: "Henry L. Kleinke", years: "1962-1966", src: "images/Henry Kleinke.JPEG" },
+      { name: "Gerald J. Day", years: "1966-1975", src: "images/Gerald J Day.JPEG" },
+      { name: "James L. Cooke", years: "1975-1978, 1979-1982", src: "images/James Cooke.JPEG" },
+      { name: "William E. Wright, Jr.", years: "1978-1979", src: "images/William Wright Jr.JPEG" },
+      { name: "Louis P. Dilillo", years: "1982-1985", src: "images/Louis Dilillo .JPEG" },
+      { name: "Amos J. Bastiani", years: "1985-1987", src: "images/Amos Bastiani.JPEG" },
+      { name: "Paul R. Woodin Jr.", years: "1987-1989", src: "images/Paul Woodin.JPEG" },
+      { name: "Donald F. Cooke, Jr.", years: "1989-1993", src: "images/Donald Cooke Jr.JPEG" },
+      { name: "James W. Kerr", years: "1993-1997, 2005-2007", src: "images/James W Kerr.JPEG" },
+      { name: "David A. Scoons", years: "1997-1999", src: "images/David Scoons.JPEG" },
+      { name: "Gregory R. Gould", years: "1999-2001, 2008-2009", src: "images/Gregory Gould .JPEG" },
+      { name: "Robert D. Lemieux", years: "2001-2002", src: "images/Robert Lemieux.JPEG" },
+      { name: "David N. Languish", years: "2003-2004", src: "images/Dave.JPEG" },
+      { name: "Stephen P. Dorsey", years: "2010-2011", src: "images/Steve Dorsey.JPEG" },
+      { name: "Arlie Hedges", years: "2019-2021", src: "images/Arlie Hedges.JPEG" },
+      { name: "Daniel J. Ryan, Jr.", years: "2012-2019, 2022-Present", src: "images/Dan Ryan Jr.JPEG" }
     ];
 
     const track = document.getElementById("track");
     const stage = document.getElementById("stage");
-
     const speed = 95;
-    let spacing = 440;
+
+    // MORE SPACE FOR BIGGER CARDS
+    let spacing = 520;
+
     let nextIndex = 0;
     const cards = [];
 
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
     function exitX() { return stage.clientWidth / 2 + spacing * 1.4; }
     function spawnLeftX() { return -exitX() - spacing; }
 
@@ -201,8 +258,9 @@
       const ease = t * t * t;
 
       return {
-        scale: 0.85 + ease * 0.6,
-        opacity: 0.15 + ease * 0.85,
+        // BIG center dominance but smooth
+        scale: 0.90 + ease * 0.65,
+        opacity: 0.18 + ease * 0.82,
         z: Math.round(ease * 1000),
       };
     }
@@ -218,13 +276,18 @@
     function build() {
       track.innerHTML = "";
       cards.length = 0;
-      let x = spawnLeftX();
 
-      for (let i = 0; i < Math.min(slides.length, 9); i++) {
+      // More cards on screen now that everything is larger
+      const count = Math.min(slides.length, 10);
+
+      let x = spawnLeftX();
+      for (let i = 0; i < count; i++) {
         const el = document.createElement("div");
         el.className = "card";
+
         render(el, slides[nextIndex]);
         nextIndex = (nextIndex + 1) % slides.length;
+
         track.appendChild(el);
         cards.push({ el, x });
         x += spacing;
@@ -242,6 +305,7 @@
         if (c.x > exitX()) {
           const minX = Math.min(...cards.map(k => k.x));
           c.x = minX - spacing;
+
           render(c.el, slides[nextIndex]);
           nextIndex = (nextIndex + 1) % slides.length;
         }
